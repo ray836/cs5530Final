@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,8 +58,23 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetDepartments()
     {
-      // TODO: Do not return this hard-coded array.
-      return Json(new[] { new { name = "None", subject = "NONE" } });
+			// TODO: Do not return this hard-coded array.
+
+			JsonResult departmentsQuery;
+
+			using (Team31LMSContext db = new Team31LMSContext())
+			{
+				var query = from dep in db.Departments
+															 select dep;
+
+				departmentsQuery = Json(query.ToArray());
+			}
+
+			Console.WriteLine(departmentsQuery);
+
+			return departmentsQuery;
+
+      //return Json(new[] { new { name = "None", subject = "NONE" } });
     }
 
 

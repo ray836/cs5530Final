@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using LMS.Models;
 using LMS.Models.AccountViewModels;
 using LMS.Services;
+using LMS.Models.LMSModels;
 
 namespace LMS.Controllers
 {
@@ -222,7 +223,7 @@ namespace LMS.Controllers
 
       foreach (var x in departments)
       {
-        depts.Add(new SelectListItem { Value = x.subject, Text = x.subject + ": " + x.name });
+        depts.Add(new SelectListItem { Value = x.Subject, Text = x.Subject + ": " + x.Name });
       }
 
       model.Departments = depts;
@@ -484,6 +485,41 @@ namespace LMS.Controllers
     /// <returns>A unique uID that is not be used by anyone else</returns>
     public string CreateNewUser(string fName, string lName, DateTime DOB, string SubjectAbbrev, string role)
     {
+			
+
+
+			using (Team31LMSContext db = new Team31LMSContext())
+			{
+
+				var uIds = (from stud in db.Students select stud.UId)
+					.Union(from prof in db.Professors select prof.UId)
+					.Union(from adm in db.Administrators select adm.UId);
+
+				Console.WriteLine(uIds);
+									 
+					
+									 //join pUids in db.Professors on sUids.UId equals pUids.UId
+									 //join aUids in db.Administrators on sUids.UId equals aUids.UId
+									 //select 
+
+				Students st = new Students
+				{
+					UId = "u0034567",
+					FirstName = fName,
+					LastName = lName,
+					Dob = DOB,
+					Major = SubjectAbbrev
+				};
+
+				db.Students.Add(st);
+				db.SaveChanges();
+
+			}
+
+			//db.Students.InsertOnSubmit(st);
+			// db.SubmitChanges();
+	  
+			// insert into Students values("u0000000", "Jake", "Grant", "1999-02-16", "CS");
       return "";
     }
 
