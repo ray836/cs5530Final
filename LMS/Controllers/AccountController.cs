@@ -500,20 +500,46 @@ namespace LMS.Controllers
 				int highestUidNumber = Int32.Parse(highestUid.Substring(1, highestUid.Length - 1));
 				int nextUidNumber = highestUidNumber + 1;
 				nextUid = "u" + nextUidNumber.ToString();
-				
 
-				Students st = new Students
+
+				// chose role
+				if(role == "Student") {
+					Students st = new Students
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB,
+						Major = SubjectAbbrev
+					};
+					db.Students.Add(st);
+					db.SaveChanges();
+				}
+				else if(role == "Professor")
 				{
-					UId = nextUid,
-					FirstName = fName,
-					LastName = lName,
-					Dob = DOB,
-					Major = SubjectAbbrev
-				};
-
-				db.Students.Add(st);
-				db.SaveChanges();
-
+					Professors pr = new Professors
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB,
+						Works = SubjectAbbrev
+					};
+					db.Professors.Add(pr);
+					db.SaveChanges();
+				}
+				else if (role == "Administrator")
+				{
+					Administrators ad = new Administrators
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB
+					};
+					db.Administrators.Add(ad);
+					db.SaveChanges();
+				}
 			}
 
       return nextUid;
