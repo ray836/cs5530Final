@@ -488,15 +488,14 @@ namespace LMS.Controllers
 			String nextUid = "not filled";
 			using (Team31LMSContext db = new Team31LMSContext())
 			{
+				var all_uIds = (from stud in db.Students orderby stud.UId descending select new { uId = stud.UId })
+					.Union(from prof in db.Professors orderby prof.UId descending select new { uId = prof.UId })
+					.Union(from adm in db.Administrators orderby adm.UId descending select new { uId = adm.UId });
 
-				var uIds = (from stud in db.Students orderby stud.UId descending select stud.UId).Take(1)
-					.Union(from prof in db.Professors orderby prof.UId descending select prof.UId).Take(1)
-					.Union(from adm in db.Administrators orderby adm.UId descending select adm.UId).Take(1);
-
-				Console.WriteLine("uids:");
+				var uIds = all_uIds.OrderByDescending(x => x.uId).Take(1);
 				
 				// get new Uid
-				String highestUid = uIds.First();
+				String highestUid = uIds.First().uId.ToString();
 				int highestUidNumber = Int32.Parse(highestUid.Substring(1, highestUid.Length - 1));
 				int nextUidNumber = highestUidNumber + 1;
 				nextUid = "u" + nextUidNumber.ToString();
