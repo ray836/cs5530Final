@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,8 +41,21 @@ namespace LMS.Controllers
     /// <returns>The JSON result</returns>
     public IActionResult GetCourses(string subject)
     {
-      
-      return Json(null);
+			
+      using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var coursesQuery =
+					from course in db.Courses
+					where course.Subject == subject
+					select new
+					{
+						number = course.Crn,
+						name = course.Name
+					};
+
+
+				return Json(coursesQuery.ToArray());
+			}
     }
 
 
@@ -59,8 +73,21 @@ namespace LMS.Controllers
     /// <returns>The JSON result</returns>
     public IActionResult GetProfessors(string subject)
     {
-   
-      return Json(null);
+			using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var profsQuery =
+					from prof in db.Professors
+					join dep in db.Departments on prof.Works equals dep.Subject
+					where prof.Works == subject
+					select new
+					{
+						lname = prof.LastName,
+						fname = prof.FirstName,
+						uid = prof.UId
+					};
+
+				return Json(profsQuery.ToArray());
+			}
     }
 
 
@@ -76,9 +103,22 @@ namespace LMS.Controllers
     /// false if the course already exists, true otherwise.</returns>
     public IActionResult CreateCourse(string subject, int number, string name)
     {
-      
+			Boolean courseCreated = false;
+			using(Team31LMSContext db = new Team31LMSContext())
+			{
+				Courses course = new Courses
+				{
+					Crn = number,
+					Name = name,
+					Subject = subject
+				};
 
-      return Json(new { success = false });
+				db.Courses.Add(course);
+				int result = db.SaveChanges();
+				courseCreated = (result == 1) ? true : false;
+			}
+
+      return Json(new { success = courseCreated });
     }
 
 
@@ -101,8 +141,33 @@ namespace LMS.Controllers
     /// true otherwise.</returns>
     public IActionResult CreateClass(string subject, int number, string season, int year, DateTime start, DateTime end, string location, string instructor)
     {
-      
-      return Json(new { success = false });
+			Boolean classCreated = false;
+      using(Team31LMSContext db = new Team31LMSContext())
+			{
+
+				var courseQuery =
+					(from course in db.Courses
+					where course.Subject == subject
+					select course.Id).Take(1);
+
+				Console.WriteLine(courseQuery);
+
+				Classes classToAdd = new Classes
+				{
+					SemesterSeason = season,
+					SemesterYear = year,
+					OfferingOf = courseQuery.First(),
+					Location = location,
+					Start = start,
+					End = end,
+					Teacher = instructor
+				};
+
+				db.Classes.Add(classToAdd);
+				int result = db.SaveChanges();
+				classCreated = (result == 1);
+			}
+      return Json(new { success = classCreated });
     }
 
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,14 +15,14 @@ namespace LMS.Controllers
 
     // TODO: Uncomment and change 'X' after you have scaffoled
 
-    /*
-    protected TeamXLMSContext db;
+    
+    protected Team31LMSContext db;
 
     public CommonController()
     {
-      db = new TeamXLMSContext();
+      db = new Team31LMSContext();
     }
-    */
+    
 
     /*
      * WARNING: This is the quick and easy way to make the controller
@@ -31,8 +32,8 @@ namespace LMS.Controllers
     */
 
     // TODO: Uncomment and change 'X' after you have scaffoled
-    /*
-    public void UseLMSContext(TeamXLMSContext ctx)
+    
+    public void UseLMSContext(Team31LMSContext ctx)
     {
       db = ctx;
     }
@@ -45,7 +46,7 @@ namespace LMS.Controllers
       }
       base.Dispose(disposing);
     }
-    */
+    
 
 
 
@@ -57,8 +58,23 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetDepartments()
     {
-      // TODO: Do not return this hard-coded array.
-      return Json(new[] { new { name = "None", subject = "NONE" } });
+			// TODO: Do not return this hard-coded array.
+
+			JsonResult departmentsQuery;
+
+			using (Team31LMSContext db = new Team31LMSContext())
+			{
+				var query = from dep in db.Departments
+															 select dep;
+
+				departmentsQuery = Json(query.ToArray());
+			}
+
+			Console.WriteLine(departmentsQuery);
+
+			return departmentsQuery;
+
+      //return Json(new[] { new { name = "None", subject = "NONE" } });
     }
 
 
@@ -75,9 +91,25 @@ namespace LMS.Controllers
     /// </summary>
     /// <returns>The JSON array</returns>
     public IActionResult GetCatalog()
-    {     
-
-      return Json(null);
+    {
+			
+			using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var depQuery =
+					from dep in db.Departments
+					select new
+					{
+						subject = dep.Subject,
+						dname = dep.Name,
+						courses = from course in dep.Courses select new
+						{
+							number = course.Crn,
+							cname = course.Name
+						}
+					};
+				
+				return Json(depQuery.ToArray());
+			}
     }
 
     /// <summary>
@@ -96,8 +128,27 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetClassOfferings(string subject, int number)
     {
-      
-      return Json(null);
+      using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var classOffQuery =
+					from clas in db.Classes
+					join course in db.Courses on clas.OfferingOf equals course.Id
+					where course.Subject == subject
+					where course.Crn == number
+					select new
+					{
+						season = clas.SemesterSeason,
+						year = clas.SemesterYear,
+						location = clas.Location,
+						start = clas.Start,
+						end = clas.End,
+						fname = from prof in db.Professors where prof.UId == clas.Teacher select prof.FirstName,
+						lname = from prof in db.Professors where prof.UId == clas.Teacher select prof.LastName
+					};
+
+				return Json(classOffQuery.ToArray());
+
+			}
     }
 
     /// <summary>
@@ -114,8 +165,17 @@ namespace LMS.Controllers
     /// <returns>The assignment contents</returns>
     public IActionResult GetAssignmentContents(string subject, int num, string season, int year, string category, string asgname)
     {
-
-      return Content("");
+			// TODO: I HAVE NOT TESTED THIS
+			using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var contentQuery =
+					from assig in db.Assignments
+					join as_cat in db.AssignmentCategories on assig.Category equals as_cat.Id
+					join clas in db.Classes on as_cat.Class equals clas.Id
+					join cours in db.Courses on clas.OfferingOf equals cours.Id
+					select assig.Contents;
+				return Content(contentQuery.First());
+			}
     }
 
 
@@ -135,8 +195,26 @@ namespace LMS.Controllers
     /// <returns>The submission text</returns>
     public IActionResult GetSubmissionText(string subject, int num, string season, int year, string category, string asgname, string uid)
     {
-      
-      return Content("");
+			// HAS NOT BEEN TESTED
+      using(Team31LMSContext db = new Team31LMSContext())
+			{
+				var subQuery =
+					from sub in db.Submissions
+					join asgn in db.Assignments on sub.AId equals asgn.Id
+					join asgnc in db.AssignmentCategories on asgn.Category equals asgnc.Id
+					join clas in db.Classes on asgnc.Class equals clas.Id
+					join cours in db.Courses on clas.OfferingOf equals cours.Id
+					where cours.Subject == subject
+					where cours.Crn == num
+					where clas.SemesterSeason == season
+					where clas.SemesterYear == year
+					where asgnc.Name == category
+					where asgn.Name == asgname
+					where sub.UId == uid
+					select sub.Contents;
+
+				return Content(subQuery.First());
+			}
     }
 
 
@@ -158,6 +236,60 @@ namespace LMS.Controllers
     /// </returns>
     public IActionResult GetUser(string uid)
     {
+			// HAS NOT BEEN TESTED
+			using(Team31LMSContext db = new Team31LMSContext())
+			{
+
+				//checking student
+				var studQuery =
+					from stud in db.Students
+					where stud.UId == uid
+					select new
+					{
+						fname = stud.FirstName,
+						lname = stud.LastName,
+						uid = stud.UId,
+						department = stud.Major
+					};
+				
+				if (studQuery.ToArray().Count() > 0 ){
+					return Json(studQuery.ToArray()[0]);
+				}
+
+				// checking prof
+				var profQuery =
+					from prof in db.Professors
+					where prof.UId == uid
+					select new
+					{
+						fname = prof.FirstName,
+						lname = prof.LastName,
+						uid = prof.UId,
+						department = prof.Works
+					};
+				
+				if (profQuery.ToArray().Count() > 0)
+				{
+					return Json(profQuery.ToArray()[0]);
+				}
+
+
+				// checking admin
+				var adminQuery =
+					from admin in db.Administrators
+					where admin.UId == uid
+					select new
+					{
+						fname = admin.FirstName,
+						lname = admin.LastName,
+						uid = admin.UId
+					};
+				
+				if (adminQuery.ToArray().Count() > 0)
+				{
+					return Json(adminQuery.ToArray()[0]);
+				}
+			}
      
       return Json(new { success = false } );
     }

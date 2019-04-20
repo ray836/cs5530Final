@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using LMS.Models;
 using LMS.Models.AccountViewModels;
 using LMS.Services;
+using LMS.Models.LMSModels;
 
 namespace LMS.Controllers
 {
@@ -222,7 +223,7 @@ namespace LMS.Controllers
 
       foreach (var x in departments)
       {
-        depts.Add(new SelectListItem { Value = x.subject, Text = x.subject + ": " + x.name });
+        depts.Add(new SelectListItem { Value = x.Subject, Text = x.Subject + ": " + x.Name });
       }
 
       model.Departments = depts;
@@ -484,7 +485,63 @@ namespace LMS.Controllers
     /// <returns>A unique uID that is not be used by anyone else</returns>
     public string CreateNewUser(string fName, string lName, DateTime DOB, string SubjectAbbrev, string role)
     {
-      return "";
+			String nextUid = "not filled";
+			using (Team31LMSContext db = new Team31LMSContext())
+			{
+				var all_uIds = (from stud in db.Students orderby stud.UId descending select new { uId = stud.UId })
+					.Union(from prof in db.Professors orderby prof.UId descending select new { uId = prof.UId })
+					.Union(from adm in db.Administrators orderby adm.UId descending select new { uId = adm.UId });
+
+				var uIds = all_uIds.OrderByDescending(x => x.uId).Take(1);
+				
+				// get new Uid
+				String highestUid = uIds.First().uId.ToString();
+				int highestUidNumber = Int32.Parse(highestUid.Substring(1, highestUid.Length - 1));
+				int nextUidNumber = highestUidNumber + 1;
+				nextUid = "u" + nextUidNumber.ToString();
+
+
+				// chose role
+				if(role == "Student") {
+					Students st = new Students
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB,
+						Major = SubjectAbbrev
+					};
+					db.Students.Add(st);
+					db.SaveChanges();
+				}
+				else if(role == "Professor")
+				{
+					Professors pr = new Professors
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB,
+						Works = SubjectAbbrev
+					};
+					db.Professors.Add(pr);
+					db.SaveChanges();
+				}
+				else if (role == "Administrator")
+				{
+					Administrators ad = new Administrators
+					{
+						UId = nextUid,
+						FirstName = fName,
+						LastName = lName,
+						Dob = DOB
+					};
+					db.Administrators.Add(ad);
+					db.SaveChanges();
+				}
+			}
+
+      return nextUid;
     }
 
     /*******End code to modify********/
