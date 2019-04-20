@@ -485,7 +485,7 @@ namespace LMS.Controllers
     /// <returns>A unique uID that is not be used by anyone else</returns>
     public string CreateNewUser(string fName, string lName, DateTime DOB, string SubjectAbbrev, string role)
     {
-
+			String nextUid = "not filled";
 			using (Team31LMSContext db = new Team31LMSContext())
 			{
 
@@ -499,7 +499,7 @@ namespace LMS.Controllers
 				String highestUid = uIds.First();
 				int highestUidNumber = Int32.Parse(highestUid.Substring(1, highestUid.Length - 1));
 				int nextUidNumber = highestUidNumber + 1;
-				String nextUid = "u" + nextUidNumber.ToString();
+				nextUid = "u" + nextUidNumber.ToString();
 				
 
 				Students st = new Students
@@ -516,7 +516,7 @@ namespace LMS.Controllers
 
 			}
 
-      return "";
+      return nextUid;
     }
 
     /*******End code to modify********/
