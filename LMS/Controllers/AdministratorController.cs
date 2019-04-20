@@ -141,8 +141,33 @@ namespace LMS.Controllers
     /// true otherwise.</returns>
     public IActionResult CreateClass(string subject, int number, string season, int year, DateTime start, DateTime end, string location, string instructor)
     {
-      
-      return Json(new { success = false });
+			Boolean classCreated = false;
+      using(Team31LMSContext db = new Team31LMSContext())
+			{
+
+				var courseQuery =
+					(from course in db.Courses
+					where course.Subject == subject
+					select course.Id).Take(1);
+
+				Console.WriteLine(courseQuery);
+
+				Classes classToAdd = new Classes
+				{
+					SemesterSeason = season,
+					SemesterYear = year,
+					OfferingOf = courseQuery.First(),
+					Location = location,
+					Start = start,
+					End = end,
+					Teacher = instructor
+				};
+
+				db.Classes.Add(classToAdd);
+				int result = db.SaveChanges();
+				classCreated = (result == 1);
+			}
+      return Json(new { success = classCreated });
     }
 
 
