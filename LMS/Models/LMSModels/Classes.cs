@@ -22,5 +22,6 @@ namespace LMS.Models.LMSModels
         public virtual Courses OfferingOfNavigation { get; set; }
         public virtual Professors TeacherNavigation { get; set; }
         public virtual ICollection<AssignmentCategories> AssignmentCategories { get; set; }
+        public virtual ICollection<Enrollment> Entrollments { get; set; }
     }
 }

@@ -18,5 +18,6 @@ namespace LMS.Models.LMSModels
 
         public virtual Departments MajorNavigation { get; set; }
         public virtual ICollection<Submissions> Submissions { get; set; }
+        public virtual ICollection<Enrollment> Entrollments { get; set; }
     }
 }

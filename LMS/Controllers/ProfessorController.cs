@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LMS;
+using LMS.Models;
+using LMS.Models.LMSModels;
 
 namespace LMS.Controllers
 {
@@ -105,8 +108,20 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetStudentsInClass(string subject, int num, string season, int year)
     {
-      
-      return Json(null);
+        JsonResult json_query;
+        using (Team31LMSContext db = new Team31LMSContext())
+        {
+            var query =
+            from s in db.Students
+            join e in db.Enrollment on s.UId equals e.UId
+            join c in db.Classes on e.ClassId equals c.Id
+            join co in db.Courses on c.OfferingOf equals co.Id
+            where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+            select new { fname = s.FirstName, lname = s.LastName, uid = s.UId, dob = s.Dob, grade = e.Grade };
+
+            json_query = Json(query.ToArray());
+        }
+        return json_query;
     }
 
 
@@ -129,8 +144,23 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetAssignmentsInCategory(string subject, int num, string season, int year, string category)
     {
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                from a in db.Assignments
+                join ac in db.AssignmentCategories on a.Category equals ac.Id
+                join c in db.Classes on ac.Class equals c.Id
+                join co in db.Courses on c.OfferingOf equals co.Id
+                join s in db.Submissions on a.Id equals s.AId
+                where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category
+                group new { a, ac, c, co, s } by new { aname = a.Name, cname = ac.Name, due = a.Due } into assignmentGroup
+                select new { assignmentGroup.Key.aname, assignmentGroup.Key.cname, assignmentGroup.Key.due };
 
-      return Json(null);
+                json_query = Json(query.Distinct().ToArray());
+            }
+
+                return json_query;
     }
 
 
