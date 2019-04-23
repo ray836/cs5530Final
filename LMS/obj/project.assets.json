@@ -12166,23 +12166,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\raygrant\\.nuget\\packages\\": {},
+    "C:\\Users\\Clyde\\.nuget\\packages\\": {},
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\raygrant\\cs5530Final\\cs5530Final\\LMS\\LMS.csproj",
+      "projectUniqueName": "C:\\Users\\Clyde\\source\\repos\\cs5530Final\\LMS\\LMS.csproj",
       "projectName": "LMS",
-      "projectPath": "C:\\Users\\raygrant\\cs5530Final\\cs5530Final\\LMS\\LMS.csproj",
-      "packagesPath": "C:\\Users\\raygrant\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\raygrant\\cs5530Final\\cs5530Final\\LMS\\obj\\",
+      "projectPath": "C:\\Users\\Clyde\\source\\repos\\cs5530Final\\LMS\\LMS.csproj",
+      "packagesPath": "C:\\Users\\Clyde\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Clyde\\source\\repos\\cs5530Final\\LMS\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
       ],
       "configFilePaths": [
-        "C:\\Users\\raygrant\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Clyde\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [

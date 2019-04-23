@@ -152,10 +152,9 @@ namespace LMS.Controllers
                 join ac in db.AssignmentCategories on a.Category equals ac.Id
                 join c in db.Classes on ac.Class equals c.Id
                 join co in db.Courses on c.OfferingOf equals co.Id
-                join s in db.Submissions on a.Id equals s.AId
                 where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category
-                group new { a, ac, c, co, s } by new { aname = a.Name, cname = ac.Name, due = a.Due } into assignmentGroup
-                select new { assignmentGroup.Key.aname, assignmentGroup.Key.cname, assignmentGroup.Key.due };
+                select new { aname = a.Name, cname = ac.Name, due = a.Due,
+                            submissions = (from s in a.Submissions select new { id = s.Id }).Count()};
 
                 json_query = Json(query.Distinct().ToArray());
             }
@@ -177,9 +176,20 @@ namespace LMS.Controllers
     /// <param name="category">The name of the assignment category in the class</param>
     /// <returns>The JSON array</returns>
     public IActionResult GetAssignmentCategories(string subject, int num, string season, int year)
-    {      
+    {
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                from co in db.Courses
+                join c in db.Classes on co.Id equals c.OfferingOf
+                join ac in db.AssignmentCategories on c.Id equals ac.Class
+                where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+                select new { name = ac.Name, weight = ac.Weight };
 
-      return Json(null);
+                json_query = Json(query.ToArray());
+            }
+                return Json(json_query);
     }
 
     /// <summary>
@@ -194,9 +204,25 @@ namespace LMS.Controllers
     /// <param name="catweight">The new category weight</param>
     /// <returns>A JSON object containing {success = true/false} </returns>
     public IActionResult CreateAssignmentCategory(string subject, int num, string season, int year, string category, int catweight)
-    {    
+    {
+            Boolean categoryCreated = false;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                AssignmentCategories newCategories = new AssignmentCategories
+                {
+                    Name = category,
+                    Weight = (ushort)catweight,
+                    Class = (from co in db.Courses
+                             join c in db.Classes on co.Id equals c.OfferingOf
+                             where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+                             select c.Id).First()
+                };
 
-      return Json(new { success = false });
+                db.AssignmentCategories.Add(newCategories);
+                int result = db.SaveChanges();
+                categoryCreated = (result == 1);
+            }
+                return Json(new { success = categoryCreated });
     }
 
     /// <summary>
@@ -214,9 +240,28 @@ namespace LMS.Controllers
     /// <returns>A JSON object containing success = true/false</returns>
     public IActionResult CreateAssignment(string subject, int num, string season, int year, string category, string asgname, int asgpoints, DateTime asgdue, string asgcontents)
     {
+            Boolean assignmentCreated = false;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                Assignments newAssignment = new Assignments
+                {
+                    Name = asgname,
+                    Contents = asgcontents,
+                    Due = asgdue,
+                    Points = asgpoints,
+                    Category = (from co in db.Courses
+                             join c in db.Classes on co.Id equals c.OfferingOf
+                             join ac in db.AssignmentCategories on c.Id equals ac.Class
+                             where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category
+                             select ac.Id).First()
+                };
 
-      return Json(new { success = false });
-    }
+                db.Assignments.Add(newAssignment);
+                int result = db.SaveChanges();
+                assignmentCreated = (result == 1);
+            }
+            return Json(new { success = assignmentCreated });
+        }
 
 
     /// <summary>
@@ -238,8 +283,22 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetSubmissionsToAssignment(string subject, int num, string season, int year, string category, string asgname)
     {
-     
-      return Json(null);
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from co in db.Courses
+                    join c in db.Classes on co.Id equals c.OfferingOf
+                    join ac in db.AssignmentCategories on c.Id equals ac.Class
+                    join a in db.Assignments on ac.Id equals a.Category
+                    join s in db.Submissions on a.Id equals s.AId
+                    join st in db.Students on s.UId equals st.UId
+                    where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category && a.Name == asgname
+                    select new { fname = st.FirstName, lname = st.LastName, uid = st.UId, time = s.Time, score = s.Score };
+
+                json_query = Json(query.ToArray());
+            }
+                return json_query;
     }
 
 
@@ -256,9 +315,22 @@ namespace LMS.Controllers
     /// <param name="score">The new score for the submission</param>
     /// <returns>A JSON object containing success = true/false</returns>
     public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
-    {    
-
-      return Json(new { success = true });
+    {
+            Boolean submissionGraded = false;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                Submissions submission = (from co in db.Courses
+                                          join c in db.Classes on co.Id equals c.OfferingOf
+                                          join ac in db.AssignmentCategories on c.Id equals ac.Class
+                                          join a in db.Assignments on ac.Id equals a.Category
+                                          join s in db.Submissions on a.Id equals s.AId
+                                          where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category && a.Name == asgname && s.UId == uid
+                                          select s).First();
+                submission.Score = score;
+                int result = db.SaveChanges();
+                submissionGraded = (result == 1);
+            }
+            return Json(new { success = submissionGraded });
     }
 
 
@@ -274,9 +346,19 @@ namespace LMS.Controllers
     /// <param name="uid">The professor's uid</param>
     /// <returns>The JSON array</returns>
     public IActionResult GetMyClasses(string uid)
-    {     
+    {
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from c in db.Classes
+                    join co in db.Courses on c.OfferingOf equals co.Id
+                    where c.Teacher == uid
+                    select new { subject = co.Subject, number = co.Crn, name = co.Name, season = c.SemesterSeason, year = c.SemesterYear };
 
-      return Json(null);
+                json_query = Json(query.ToArray());
+            }
+                return json_query;
     }
 
 

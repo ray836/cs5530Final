@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LMS;
+using LMS.Models;
+using LMS.Models.LMSModels;
 
 namespace LMS.Controllers
 {
@@ -67,8 +70,19 @@ namespace LMS.Controllers
     /// <returns>The JSON array</returns>
     public IActionResult GetMyClasses(string uid)
     {
-   
-      return Json(null);
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from e in db.Enrollment
+                    join c in db.Classes on e.ClassId equals c.Id
+                    join co in db.Courses on c.OfferingOf equals co.Id
+                    where e.UId == uid
+                    select new { subject = co.Subject, number = co.Crn, name = co.Name, season = c.SemesterSeason, year = c.SemesterYear, grade = e.Grade };
+
+                json_query = Json(query.ToArray());
+            }
+                return json_query;
     }
 
     /// <summary>
@@ -86,9 +100,24 @@ namespace LMS.Controllers
     /// <param name="uid"></param>
     /// <returns>The JSON array</returns>
     public IActionResult GetAssignmentsInClass(string subject, int num, string season, int year, string uid)
-    {     
+    {
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from e in db.Enrollment
+                    join c in db.Classes on e.ClassId equals c.Id
+                    join co in db.Courses on c.OfferingOf equals co.Id
+                    join ac in db.AssignmentCategories on c.Id equals ac.Class
+                    join a in db.Assignments on ac.Id equals a.Category
+                    join s in db.Submissions on a.Id equals s.AId into sub
+                    from s in sub.DefaultIfEmpty()
+                    where e.UId == uid && co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+                    select new { aname = a.Name, cname = ac.Name, due = a.Due, score = s == null ? null : s.Score };
 
-      return Json(null);
+                json_query = Json(query.ToArray());
+            }
+                return json_query;
     }
 
 
@@ -113,8 +142,46 @@ namespace LMS.Controllers
     public IActionResult SubmitAssignmentText(string subject, int num, string season, int year, 
       string category, string asgname, string uid, string contents)
     {
-     
-      return Json(new { success = false });
+            Boolean submitted = false;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                Submissions submission =
+                    (from s in db.Submissions
+                     join a in db.Assignments on s.AId equals a.Id
+                     join ac in db.AssignmentCategories on a.Category equals ac.Id
+                     join c in db.Classes on ac.Class equals c.Id
+                     join co in db.Courses on c.OfferingOf equals co.Id
+                     where s.UId == uid && a.Name == asgname && ac.Name == category && c.SemesterSeason == season && c.SemesterYear == year && co.Subject == subject && co.Crn == num
+                     select s).FirstOrDefault();
+
+                if (submission == null)
+                {
+                    Submissions newSubmission = new Submissions
+                    {
+                        UId = uid,
+                        Score = 0,
+                        Contents = contents,
+                        Time = DateTime.Now,
+                        AId = (from a in db.Assignments
+                               join ac in db.AssignmentCategories on a.Category equals ac.Id
+                               join c in db.Classes on ac.Class equals c.Id
+                               join co in db.Courses on c.OfferingOf equals co.Id
+                               where a.Name == asgname && ac.Name == category && c.SemesterSeason == season && c.SemesterYear == year && co.Subject == subject && co.Crn == num
+                               select a.Id).First()
+                    };
+
+                    db.Submissions.Add(newSubmission);
+                    int result = db.SaveChanges();
+                    submitted = (result == 1);
+                } else
+                {
+                    submission.Contents = contents;
+                    submission.Time = DateTime.Now;
+                    int result = db.SaveChanges();
+                    submitted = (result == 1);
+                }
+            }
+            return Json(new { success = submitted });
     }
 
     
@@ -129,9 +196,38 @@ namespace LMS.Controllers
     /// <returns>A JSON object containing {success = {true/false}. 
     /// false if the student is already enrolled in the class, true otherwise.</returns>
     public IActionResult Enroll(string subject, int num, string season, int year, string uid)
-    {      
+    {
+            Boolean enrolled = false;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from e in db.Enrollment
+                    join c in db.Classes on e.ClassId equals c.Id
+                    join co in db.Courses on c.OfferingOf equals co.Id
+                    where e.UId == uid && co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+                    select e;
 
-      return Json(new { success = false });
+                if (query.Count() > 0)
+                {
+                    enrolled = false;
+                } else
+                {
+                    Enrollment newEnrollment = new Enrollment
+                    {
+                        UId = uid,
+                        Grade = "--",
+                        ClassId = (from c in db.Classes
+                                   join co in db.Courses on c.OfferingOf equals co.Id
+                                   where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year
+                                   select c.Id).First()
+                    };
+
+                    db.Enrollment.Add(newEnrollment);
+                    int result = db.SaveChanges();
+                    enrolled = (result == 1);
+                }
+            }
+            return Json(new { success = enrolled });
     }
 
 
@@ -148,9 +244,78 @@ namespace LMS.Controllers
     /// <param name="uid">The uid of the student</param>
     /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
     public IActionResult GetGPA(string uid)
-    {     
+    {
+            JsonResult json_query;
+            using (Team31LMSContext db = new Team31LMSContext())
+            {
+                var query =
+                    from e in db.Enrollment
+                    where e.UId == uid && e.Grade != null && e.Grade != "--"
+                    select GPAFeed(e.Grade);
 
-      return Json(null);
+                if (query.Count() == 0)
+                {
+                    json_query = Json(new { gpa = 0.0 });
+                } else
+                {
+                    // Taking a straight average because all courses are 4 credit hours
+                    json_query = Json(new { gpa = query.Average() });
+                }
+            }
+                return json_query;
+    }
+
+   
+    /// <summary>
+    /// Takes in a letter grade and returns the GPA for that grade
+    /// </summary>
+    /// <param name="grade"></param>
+    /// <returns></returns>
+    private Double GPAFeed(string grade)
+    {
+        Double gpa = 0.0;
+        switch (grade)
+        {
+            case "A+":
+            case "A":
+                gpa = 4.0;
+                break;
+            case "A-":
+                gpa = 3.7;
+                break;
+            case "B+":
+                gpa = 3.3;
+                break;
+            case "B":
+                gpa = 3.0;
+                break;
+            case "B-":
+                gpa = 2.7;
+                break;
+            case "C+":
+                gpa = 2.3;
+                break;
+            case "C":
+                gpa = 2.0;
+                break;
+            case "C-":
+                gpa = 1.7;
+                break;
+            case "D+":
+                gpa = 1.3;
+                break;
+            case "D":
+                gpa = 1.0;
+                break;
+            case "D-":
+                gpa = 0.7;
+                break;
+            case "E":
+                gpa = 0.0;
+                break;               
+
+        }
+        return gpa;
     }
 
     /*******End code to modify********/
