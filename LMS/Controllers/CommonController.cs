@@ -174,7 +174,7 @@ namespace LMS.Controllers
 					join clas in db.Classes on as_cat.Class equals clas.Id
 					join cours in db.Courses on clas.OfferingOf equals cours.Id
 					select assig.Contents;
-				return Content(contentQuery.First());
+				return Content(contentQuery.FirstOrDefault());
 			}
     }
 
@@ -213,7 +213,7 @@ namespace LMS.Controllers
 					where sub.UId == uid
 					select sub.Contents;
 
-				return Content(subQuery.First());
+				return Content(subQuery.FirstOrDefault());
 			}
     }
 

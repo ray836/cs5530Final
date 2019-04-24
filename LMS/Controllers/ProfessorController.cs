@@ -152,7 +152,7 @@ namespace LMS.Controllers
                 join ac in db.AssignmentCategories on a.Category equals ac.Id
                 join c in db.Classes on ac.Class equals c.Id
                 join co in db.Courses on c.OfferingOf equals co.Id
-                where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && ac.Name == category
+                where co.Subject == subject && co.Crn == num && c.SemesterSeason == season && c.SemesterYear == year && (ac.Name == category || category == null)
                 select new { aname = a.Name, cname = ac.Name, due = a.Due,
                             submissions = (from s in a.Submissions select new { id = s.Id }).Count()};
 
@@ -189,7 +189,7 @@ namespace LMS.Controllers
 
                 json_query = Json(query.ToArray());
             }
-                return Json(json_query);
+                return json_query;
     }
 
     /// <summary>
